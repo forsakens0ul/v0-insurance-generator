@@ -2,35 +2,6 @@
 
 import type { QuoterConfig } from "./types"
 
-// 分割函数参数（考虑括号嵌套）
-function splitArgs(argsStr: string): string[] {
-  const args: string[] = []
-  let currentArg = ""
-  let depth = 0
-
-  for (let i = 0; i < argsStr.length; i++) {
-    const char = argsStr[i]
-    if (char === "(" || char === "[" || char === "{") {
-      depth++
-      currentArg += char
-    } else if (char === ")" || char === "]" || char === "}") {
-      depth--
-      currentArg += char
-    } else if (char === "," && depth === 0) {
-      args.push(currentArg.trim())
-      currentArg = ""
-    } else {
-      currentArg += char
-    }
-  }
-
-  if (currentArg.trim()) {
-    args.push(currentArg.trim())
-  }
-
-  return args
-}
-
 // 内置函数定义
 const builtInFunctions: Record<string, (...args: number[]) => number> = {
   // 数学函数
@@ -102,9 +73,21 @@ export function evaluateFormula(
     fields: QuoterConfig["fields"]
   },
 ): number {
-  let processedExpr = expression
   try {
-    // 先替换字段引用 - 使用 $ 前缀表示字段
+    // 替换 LOOKUP 函数调用
+    // 格式: LOOKUP(tableId, rowKey, colKey)
+    let processedExpr = expression.replace(
+      /LOOKUP\s*$$\s*["']?(\w+)["']?\s*,\s*(.+?)\s*,\s*(.+?)\s*$$/g,
+      (_, tableId, rowKeyExpr, colKeyExpr) => {
+        // 解析行键和列键表达式
+        const rowKey = evaluateSubExpression(rowKeyExpr, context)
+        const colKey = evaluateSubExpression(colKeyExpr, context)
+        const value = lookupCoefficient(context.coefficientTables, tableId, String(rowKey), String(colKey))
+        return String(value)
+      },
+    )
+
+    // 替换字段引用 - 使用 $ 前缀表示字段
     // 例如: $age, $gender, $occupation
     processedExpr = processedExpr.replace(/\$(\w+)/g, (_, fieldId) => {
       const value = context.formValues[fieldId]
@@ -120,60 +103,25 @@ export function evaluateFormula(
       return String(context.calculatedValues[calcId] ?? 0)
     })
 
-    // 最后替换 LOOKUP 函数调用
-    // 格式: LOOKUP(tableId, rowKey, colKey)
-    processedExpr = processedExpr.replace(
-      /LOOKUP\s*\(\s*["']?(\w+)["']?\s*,\s*(.+?)\s*,\s*(.+?)\s*\)/g,
-      (_, tableId, rowKeyExpr, colKeyExpr) => {
-        // 解析行键和列键表达式
-        const rowKey = evaluateSubExpression(rowKeyExpr, context)
-        const colKey = evaluateSubExpression(colKeyExpr, context)
-        const value = lookupCoefficient(context.coefficientTables, tableId, String(rowKey), String(colKey))
-        return String(value)
-      },
-    )
-
-    // 替换内置函数（需要处理嵌套括号）
+    // 替换内置函数
     for (const [funcName, func] of Object.entries(builtInFunctions)) {
-      let changed = true
-      while (changed) {
-        changed = false
-        const regex = new RegExp(`${funcName}\\s*\\(`, "i")
-        const match = processedExpr.match(regex)
-
-        if (match && match.index !== undefined) {
-          const offset = match.index
-          let depth = 1
-          let i = offset + match[0].length
-
-          // 找到匹配的右括号
-          while (i < processedExpr.length && depth > 0) {
-            if (processedExpr[i] === "(") depth++
-            if (processedExpr[i] === ")") depth--
-            i++
-          }
-
-          if (depth === 0) {
-            const argsStr = processedExpr.substring(offset + match[0].length, i - 1)
-            const args = splitArgs(argsStr).map((arg: string) => {
-              const trimmed = arg.trim()
-              const num = Number(trimmed)
-              if (!isNaN(num)) return num
-              return evaluateFormula(trimmed, context)
-            })
-            const result = String(func(...args))
-
-            // 替换整个函数调用
-            processedExpr = processedExpr.substring(0, offset) + result + processedExpr.substring(i)
-            changed = true
-          }
-        }
-      }
+      const regex = new RegExp(`${funcName}\\s*\$$([^)]+)\$$`, "gi")
+      processedExpr = processedExpr.replace(regex, (_, argsStr) => {
+        const args = argsStr.split(",").map((arg: string) => {
+          const trimmed = arg.trim()
+          // 如果是数字直接返回
+          const num = Number(trimmed)
+          if (!isNaN(num)) return num
+          // 否则尝试递归解析
+          return evaluateFormula(trimmed, context)
+        })
+        return String(func(...args))
+      })
     }
 
     // 安全地执行数学表达式
     // 移除所有非数学字符（保留数字、运算符、括号、小数点）
-    const safeExpr = processedExpr.replace(/[^0-9+\-*/().\s]/g, "")
+    const safeExpr = processedExpr.replace(/[^0-9+\-*/().e\s]/g, "")
 
     if (!safeExpr.trim()) return 0
 

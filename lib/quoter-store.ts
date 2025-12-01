@@ -47,14 +47,10 @@ function getInitialFormValues(config: QuoterConfig): Record<string, string | num
   return values
 }
 
-export const useQuoterStore = create<QuoterState>((set, get) => {
-  const initialFormValues = getInitialFormValues(defaultInsuranceConfig)
-  const initialCalculatedValues = calculateAll(defaultInsuranceConfig, initialFormValues)
-
-  return {
+export const useQuoterStore = create<QuoterState>((set, get) => ({
   config: defaultInsuranceConfig,
-  formValues: initialFormValues,
-  calculatedValues: initialCalculatedValues,
+  formValues: getInitialFormValues(defaultInsuranceConfig),
+  calculatedValues: {},
 
   setConfig: (config) => {
     set({
@@ -272,4 +268,4 @@ export const useQuoterStore = create<QuoterState>((set, get) => {
     const results = calculateAll(config, formValues)
     set({ calculatedValues: results })
   },
-}})
+}))
