@@ -7,17 +7,19 @@ import { ExportPanel } from "@/components/export-panel"
 import { ApiKeyDialog } from "@/components/api-key-dialog"
 import { HistoryPanel } from "@/components/history-panel"
 import { TemplateSelector } from "@/components/template-selector"
+import { FormulaDebugger } from "@/components/formula-debugger"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { PanelLeftClose, PanelLeftOpen, Download, Save, RotateCcw, Smartphone, Key, History } from "lucide-react"
+import { PanelLeftClose, PanelLeftOpen, Download, Save, RotateCcw, Smartphone, Key, History, Bug } from "lucide-react"
 import { useQuoterStore } from "@/lib/quoter-store"
 
 export default function Home() {
   const [showExport, setShowExport] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
+  const [showDebugger, setShowDebugger] = useState(false)
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false)
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
@@ -61,6 +63,10 @@ export default function Home() {
           <Button variant="outline" size="sm" onClick={() => setShowHistory(!showHistory)}>
             <History className="mr-1 h-4 w-4" />
             历史记录
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setShowDebugger(!showDebugger)}>
+            <Bug className="mr-1 h-4 w-4" />
+            调试
           </Button>
           <Button size="sm" onClick={() => setShowExport(!showExport)}>
             <Download className="mr-1 h-4 w-4" />
@@ -122,7 +128,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Right Panel - Export / History */}
+        {/* Right Panel - Export / History / Debugger */}
         {showExport && (
           <div className="w-[400px] border-l border-border">
             <ExportPanel />
@@ -130,6 +136,9 @@ export default function Home() {
         )}
         {showHistory && (
           <HistoryPanel onClose={() => setShowHistory(false)} />
+        )}
+        {showDebugger && (
+          <FormulaDebugger />
         )}
       </div>
 

@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { Download, Copy, Check, FileSpreadsheet, FileCode, FileText } from "lucide-react"
+import { Download, Copy, Check, FileSpreadsheet, FileCode, FileText, FileType } from "lucide-react"
 import { useQuoterStore } from "@/lib/quoter-store"
+import { pdf } from "@react-pdf/renderer"
+import { PDFQuotation } from "./pdf-quotation"
 
 export function ExportPanel() {
   const { config, formValues, calculatedValues } = useQuoterStore()
@@ -455,6 +457,25 @@ ${resultDisplayCode}
     URL.revokeObjectURL(url)
   }
 
+  const handleDownloadPDF = async () => {
+    const blob = await pdf(
+      <PDFQuotation
+        config={config}
+        formValues={formValues}
+        calculatedValues={calculatedValues}
+      />
+    ).toBlob()
+
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `${config.name}-报价单-${new Date().toLocaleDateString("zh-CN")}.pdf`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   const tsxCode = generateTSXCode()
   const formulasTxt = generateFormulasTXT()
   const excelCsv = generateExcelCSV()
@@ -465,8 +486,12 @@ ${resultDisplayCode}
         <CardTitle className="text-lg">导出</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden p-0">
-        <Tabs defaultValue="tsx" className="h-full flex flex-col">
-          <TabsList className="mx-4 mt-3 grid w-[calc(100%-2rem)] grid-cols-3">
+        <Tabs defaultValue="pdf" className="h-full flex flex-col">
+          <TabsList className="mx-4 mt-3 grid w-[calc(100%-2rem)] grid-cols-4">
+            <TabsTrigger value="pdf" className="gap-1">
+              <FileType className="h-3 w-3" />
+              PDF
+            </TabsTrigger>
             <TabsTrigger value="tsx" className="gap-1">
               <FileCode className="h-3 w-3" />
               TSX
@@ -480,6 +505,38 @@ ${resultDisplayCode}
               Excel
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="pdf" className="flex-1 flex flex-col px-4 pb-4 mt-3">
+            <div className="rounded-lg border border-border bg-muted/30 p-6 space-y-4">
+              <div className="text-center space-y-2">
+                <FileType className="h-12 w-12 mx-auto text-primary" />
+                <h3 className="text-lg font-semibold">导出 PDF 报价单</h3>
+                <p className="text-sm text-muted-foreground">
+                  生成专业格式的 PDF 报价单文档，包含所有输入信息和计算结果
+                </p>
+              </div>
+              <div className="bg-card rounded-lg p-4 space-y-2 border">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">报价器名称：</span>
+                  <span className="font-medium">{config.name}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">总保费：</span>
+                  <span className="font-bold text-primary">
+                    {calculatedValues.totalPremium?.toFixed(2) || "0.00"} 元
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">生成日期：</span>
+                  <span className="font-medium">{new Date().toLocaleDateString("zh-CN")}</span>
+                </div>
+              </div>
+              <Button className="w-full" onClick={handleDownloadPDF}>
+                <Download className="h-4 w-4 mr-2" />
+                下载 PDF 报价单
+              </Button>
+            </div>
+          </TabsContent>
 
           <TabsContent value="tsx" className="flex-1 flex flex-col px-4 pb-4 mt-3 overflow-hidden">
             <div className="flex gap-2 mb-2">
