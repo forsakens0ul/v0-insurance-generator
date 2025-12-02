@@ -197,6 +197,106 @@ export function FormulaEditor() {
         </CardContent>
       </Card>
 
+      {/* 添加公式按钮（移到顶部） */}
+      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" className="w-full h-9 border-dashed bg-transparent">
+            <Plus className="h-4 w-4 mr-2" />
+            添加计算公式
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>添加新公式</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">公式ID</Label>
+                <Input
+                  value={newFormula.id}
+                  className="h-8 text-sm font-mono"
+                  placeholder="如: customPremium"
+                  onChange={(e) => setNewFormula({ ...newFormula, id: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">公式名称</Label>
+                <Input
+                  value={newFormula.name}
+                  className="h-8 text-sm"
+                  placeholder="如: 自定义保费"
+                  onChange={(e) => setNewFormula({ ...newFormula, name: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">说明</Label>
+              <Input
+                value={newFormula.description}
+                className="h-8 text-sm"
+                placeholder="计算逻辑说明"
+                onChange={(e) => setNewFormula({ ...newFormula, description: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">计算表达式</Label>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 text-xs gap-1"
+                  onClick={() => openAiDialog()}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  AI生成
+                </Button>
+              </div>
+              <Textarea
+                className="text-sm font-mono"
+                rows={3}
+                placeholder="如: ROUND($amount * LOOKUP(rateTable, $type, $age), 2)"
+                value={newFormula.expression}
+                onChange={(e) => setNewFormula({ ...newFormula, expression: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={newFormula.showInResult}
+                    onCheckedChange={(checked) => setNewFormula({ ...newFormula, showInResult: checked })}
+                  />
+                  <Label className="text-xs">显示在结果区域</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs">单位:</Label>
+                  <Input
+                    value={newFormula.unit || ""}
+                    className="h-7 w-20 text-xs"
+                    onChange={(e) => setNewFormula({ ...newFormula, unit: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={newFormula.arrayFormula || false}
+                  onCheckedChange={(checked) => setNewFormula({ ...newFormula, arrayFormula: checked })}
+                />
+                <Label className="text-xs">数组公式（对每个数组项执行）</Label>
+              </div>
+            </div>
+
+            <Button onClick={handleAddFormula} className="w-full">
+              添加公式
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* 公式列表 */}
       {config.formulas.map((formula) => {
         const isExpanded = expandedFormula === formula.id
@@ -335,106 +435,6 @@ export function FormulaEditor() {
           </Card>
         )
       })}
-
-      {/* 添加公式按钮 */}
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" className="w-full h-9 border-dashed bg-transparent">
-            <Plus className="h-4 w-4 mr-2" />
-            添加计算公式
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>添加新公式</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 pt-2">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">公式ID</Label>
-                <Input
-                  value={newFormula.id}
-                  className="h-8 text-sm font-mono"
-                  placeholder="如: customPremium"
-                  onChange={(e) => setNewFormula({ ...newFormula, id: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">公式名称</Label>
-                <Input
-                  value={newFormula.name}
-                  className="h-8 text-sm"
-                  placeholder="如: 自定义保费"
-                  onChange={(e) => setNewFormula({ ...newFormula, name: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-xs">说明</Label>
-              <Input
-                value={newFormula.description}
-                className="h-8 text-sm"
-                placeholder="计算逻辑说明"
-                onChange={(e) => setNewFormula({ ...newFormula, description: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs">计算表达式</Label>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 text-xs gap-1"
-                  onClick={() => openAiDialog()}
-                >
-                  <Sparkles className="h-3 w-3" />
-                  AI生成
-                </Button>
-              </div>
-              <Textarea
-                className="text-sm font-mono"
-                rows={3}
-                placeholder="如: ROUND($amount * LOOKUP(rateTable, $type, $age), 2)"
-                value={newFormula.expression}
-                onChange={(e) => setNewFormula({ ...newFormula, expression: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={newFormula.showInResult}
-                    onCheckedChange={(checked) => setNewFormula({ ...newFormula, showInResult: checked })}
-                  />
-                  <Label className="text-xs">显示在结果区域</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs">单位:</Label>
-                  <Input
-                    value={newFormula.unit || ""}
-                    className="h-7 w-20 text-xs"
-                    onChange={(e) => setNewFormula({ ...newFormula, unit: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={newFormula.arrayFormula || false}
-                  onCheckedChange={(checked) => setNewFormula({ ...newFormula, arrayFormula: checked })}
-                />
-                <Label className="text-xs">数组公式（对每个数组项执行）</Label>
-              </div>
-            </div>
-
-            <Button onClick={handleAddFormula} className="w-full">
-              添加公式
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* AI 公式生成对话框 */}
       <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
