@@ -114,9 +114,10 @@ export function evaluateFormula(
     processedExpr = processedExpr.replace(/\$(\w+)/g, (_, fieldId) => {
       let value = context.formValues[fieldId]
 
-      // 如果是数组公式计算，从数组中获取对应项
-      if (arrayIndex !== undefined && Array.isArray(value)) {
-        value = value[arrayIndex]?.[fieldId] ?? value[arrayIndex]
+      // 如果值是undefined或null，尝试从数组项中获取
+      // （数组项的字段已经通过 ...arrayValue[i] 展开到 formValues 中了）
+      if (value === undefined || value === null) {
+        value = 0
       }
 
       if (typeof value === "string") {

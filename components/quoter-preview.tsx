@@ -114,7 +114,7 @@ export function QuoterPreview() {
             </Label>
             <ArrayFieldEditor
               field={field}
-              value={Array.isArray(value) ? value : field.defaultValue as any[] || []}
+              value={Array.isArray(value) ? value : (Array.isArray(field.defaultValue) ? field.defaultValue : [])}
               onChange={(newValue) => setFormValue(field.id, newValue)}
             />
           </div>
@@ -167,20 +167,43 @@ export function QuoterPreview() {
             <CardContent className="space-y-3">
               {resultFormulas
                 .filter((f) => f.id !== "totalPremium")
-                .map((formula) => (
-                  <div key={formula.id} className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">{formula.name}</span>
-                    <span className="text-sm font-medium text-primary">
-                      {calculatedValues[formula.id]?.toFixed(2) ?? "0.00"} {formula.unit}
-                    </span>
-                  </div>
-                ))}
+                .map((formula) => {
+                  const value = calculatedValues[formula.id]
+                  const isArray = Array.isArray(value)
+
+                  if (isArray) {
+                    return (
+                      <div key={formula.id} className="space-y-2">
+                        <span className="text-xs font-medium text-muted-foreground">{formula.name}</span>
+                        {value.map((v: number, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center pl-4">
+                            <span className="text-xs text-muted-foreground">职业{idx + 1}</span>
+                            <span className="text-sm font-medium text-primary">
+                              {v?.toFixed(2) ?? "0.00"} {formula.unit}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div key={formula.id} className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">{formula.name}</span>
+                      <span className="text-sm font-medium text-primary">
+                        {value?.toFixed(2) ?? "0.00"} {formula.unit}
+                      </span>
+                    </div>
+                  )
+                })}
               {totalFormula && (
                 <div className="border-t border-border pt-3">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">{totalFormula.name}</span>
                     <span className="text-lg font-bold text-orange-500">
-                      {calculatedValues[totalFormula.id]?.toFixed(2) ?? "0.00"} {totalFormula.unit}
+                      {typeof calculatedValues[totalFormula.id] === 'number'
+                        ? calculatedValues[totalFormula.id]?.toFixed(2)
+                        : "0.00"} {totalFormula.unit}
                     </span>
                   </div>
                 </div>
@@ -195,7 +218,9 @@ export function QuoterPreview() {
         <div className="flex-1 px-4 py-3">
           <span className="text-sm text-muted-foreground">总保费</span>
           <span className="ml-2 text-xl font-bold text-red-500">
-            {calculatedValues.totalPremium?.toFixed(2) ?? "0.00"}
+            {typeof calculatedValues.totalPremium === 'number'
+              ? calculatedValues.totalPremium.toFixed(2)
+              : "0.00"}
           </span>
           <span className="ml-1 text-sm text-muted-foreground">元</span>
         </div>
