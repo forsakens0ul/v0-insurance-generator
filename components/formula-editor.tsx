@@ -30,6 +30,7 @@ export function FormulaEditor() {
     dependencies: [],
     showInResult: true,
     unit: "元",
+    arrayFormula: false,
   })
 
   const handleAddFormula = () => {
@@ -42,6 +43,7 @@ export function FormulaEditor() {
         dependencies: extractDependencies(newFormula.expression),
         showInResult: newFormula.showInResult ?? true,
         unit: newFormula.unit,
+        arrayFormula: newFormula.arrayFormula,
       })
       setNewFormula({
         id: "",
@@ -51,6 +53,7 @@ export function FormulaEditor() {
         dependencies: [],
         showInResult: true,
         unit: "元",
+        arrayFormula: false,
       })
       setAddDialogOpen(false)
     }
@@ -220,7 +223,9 @@ export function FormulaEditor() {
                 <div className="flex items-center gap-2">
                   {calculatedValue !== undefined && (
                     <span className="text-sm font-medium text-primary">
-                      = {calculatedValue.toFixed(2)} {formula.unit}
+                      = {Array.isArray(calculatedValue)
+                          ? `[${calculatedValue.length}项]`
+                          : `${calculatedValue.toFixed(2)} ${formula.unit}`}
                     </span>
                   )}
                   <Button
@@ -299,21 +304,30 @@ export function FormulaEditor() {
                   ))}
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={formula.showInResult}
-                      onCheckedChange={(checked) => updateFormula(formula.id, { showInResult: checked })}
-                    />
-                    <Label className="text-xs">显示在结果区域</Label>
+                <div className="space-y-2 pt-2 border-t">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={formula.showInResult}
+                        onCheckedChange={(checked) => updateFormula(formula.id, { showInResult: checked })}
+                      />
+                      <Label className="text-xs">显示在结果区域</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs">单位:</Label>
+                      <Input
+                        value={formula.unit || ""}
+                        className="h-7 w-16 text-xs"
+                        onChange={(e) => updateFormula(formula.id, { unit: e.target.value })}
+                      />
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Label className="text-xs">单位:</Label>
-                    <Input
-                      value={formula.unit || ""}
-                      className="h-7 w-16 text-xs"
-                      onChange={(e) => updateFormula(formula.id, { unit: e.target.value })}
+                    <Switch
+                      checked={formula.arrayFormula || false}
+                      onCheckedChange={(checked) => updateFormula(formula.id, { arrayFormula: checked })}
                     />
+                    <Label className="text-xs">数组公式（对每个数组项执行）</Label>
                   </div>
                 </div>
               </CardContent>
@@ -388,21 +402,30 @@ export function FormulaEditor() {
               />
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={newFormula.showInResult}
-                  onCheckedChange={(checked) => setNewFormula({ ...newFormula, showInResult: checked })}
-                />
-                <Label className="text-xs">显示在结果区域</Label>
+            <div className="space-y-2">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={newFormula.showInResult}
+                    onCheckedChange={(checked) => setNewFormula({ ...newFormula, showInResult: checked })}
+                  />
+                  <Label className="text-xs">显示在结果区域</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs">单位:</Label>
+                  <Input
+                    value={newFormula.unit || ""}
+                    className="h-7 w-20 text-xs"
+                    onChange={(e) => setNewFormula({ ...newFormula, unit: e.target.value })}
+                  />
+                </div>
               </div>
               <div className="flex items-center gap-2">
-                <Label className="text-xs">单位:</Label>
-                <Input
-                  value={newFormula.unit || ""}
-                  className="h-7 w-20 text-xs"
-                  onChange={(e) => setNewFormula({ ...newFormula, unit: e.target.value })}
+                <Switch
+                  checked={newFormula.arrayFormula || false}
+                  onCheckedChange={(checked) => setNewFormula({ ...newFormula, arrayFormula: checked })}
                 />
+                <Label className="text-xs">数组公式（对每个数组项执行）</Label>
               </div>
             </div>
 
