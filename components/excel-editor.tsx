@@ -15,6 +15,7 @@ import { Plus, Trash2, GripVertical, Settings2 } from "lucide-react"
 import { useQuoterStore } from "@/lib/quoter-store"
 import { CoefficientTableEditor } from "./coefficient-table-editor"
 import { FormulaEditor } from "./formula-editor"
+import { AIChatPanel } from "./ai-chat-panel"
 import type { FormField, FieldType, CoefficientTable } from "@/lib/types"
 
 export function ExcelEditor() {
@@ -76,6 +77,10 @@ export function ExcelEditor() {
     <div className="flex h-full flex-col bg-card">
       <div className="flex-shrink-0 flex items-center justify-between border-b border-border px-4 py-3">
         <h2 className="text-lg font-semibold text-foreground">配置编辑器</h2>
+      </div>
+
+      <div className="flex-shrink-0 px-4 pt-4">
+        <AIChatPanel />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col min-h-0">
