@@ -94,6 +94,9 @@ function lookup(
     const defaultValues = config.fields
       .map((f) => {
         const val = f.defaultValue
+        if (f.type === "array") {
+          return `    ${f.id}: ${JSON.stringify(val ?? [])},`
+        }
         if (typeof val === "string") return `    ${f.id}: "${val}",`
         return `    ${f.id}: ${val ?? 0},`
       })
@@ -102,7 +105,16 @@ function lookup(
     // 生成表单渲染代码
     const formFieldsCode = config.fields
       .map((field) => {
-        if (field.type === "radio") {
+        if (field.type === "array") {
+          return `
+        {/* ${field.label} */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">
+            ${field.required ? '<span className="text-red-500">*</span> ' : ""}${field.label}
+          </label>
+          <p className="text-sm text-gray-500">数组字段暂不支持导出代码生成</p>
+        </div>`
+        } else if (field.type === "radio") {
           return `
         {/* ${field.label} */}
         <div className="space-y-2">
@@ -184,13 +196,17 @@ function lookup(
     const resultDisplayCode = config.formulas
       .filter((f) => f.showInResult)
       .map((formula) => {
+        const valueDisplay = formula.arrayFormula
+          ? `Array.isArray(results.${formula.id}) ? '[' + results.${formula.id}.length + '项]' : (results.${formula.id}?.toFixed(2) ?? "0.00")`
+          : `results.${formula.id}?.toFixed(2) ?? "0.00"`
+
         if (formula.id === "totalPremium") {
           return `
           <div className="border-t pt-3 mt-3">
             <div className="flex justify-between items-center">
               <span className="font-medium">${formula.name}</span>
               <span className="text-xl font-bold text-red-500">
-                {results.${formula.id}?.toFixed(2) ?? "0.00"} ${formula.unit || ""}
+                {${valueDisplay}} ${formula.unit || ""}
               </span>
             </div>
           </div>`
@@ -199,7 +215,7 @@ function lookup(
           <div className="flex justify-between items-center">
             <span className="text-gray-600">${formula.name}</span>
             <span className="font-medium text-blue-600">
-              {results.${formula.id}?.toFixed(2) ?? "0.00"} ${formula.unit || ""}
+              {${valueDisplay}} ${formula.unit || ""}
             </span>
           </div>`
       })

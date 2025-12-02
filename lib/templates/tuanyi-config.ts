@@ -424,8 +424,8 @@ export const tuanyiConfig: QuoterConfig = {
     {
       id: "peopleCountCoef",
       name: "人数系数",
-      description: "根据投保人数确定系数",
-      expression: "IF($peopleCount < 20, 1.2, IF($peopleCount <= 100, 1, 0.8))",
+      description: "根据投保人数确定系数（<20人:0.8, 20-100人:1.0, >100人:1.2）",
+      expression: "IF($peopleCount < 20, 0.8, IF($peopleCount <= 100, 1, 1.2))",
       dependencies: [],
       showInResult: false,
       unit: "",
