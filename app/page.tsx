@@ -4,15 +4,25 @@ import { useState } from "react"
 import { ExcelEditor } from "@/components/excel-editor"
 import { QuoterPreview } from "@/components/quoter-preview"
 import { ExportPanel } from "@/components/export-panel"
+import { ApiKeyDialog } from "@/components/api-key-dialog"
+import { HistoryPanel } from "@/components/history-panel"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PanelLeftClose, PanelLeftOpen, Download, Save, RotateCcw, Smartphone } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { PanelLeftClose, PanelLeftOpen, Download, Save, RotateCcw, Smartphone, Key, History } from "lucide-react"
 import { useQuoterStore } from "@/lib/quoter-store"
 
 export default function Home() {
   const [showExport, setShowExport] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
-  const { config, calculate } = useQuoterStore()
+  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false)
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+  const [configName, setConfigName] = useState("")
+  const [saving, setSaving] = useState(false)
+  const { config, resetToDefault } = useQuoterStore()
 
   return (
     <div className="flex h-screen flex-col bg-background">
@@ -30,17 +40,27 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => calculate()}>
+          <Button variant="outline" size="sm" onClick={() => resetToDefault()}>
             <RotateCcw className="mr-1 h-4 w-4" />
-            重新计算
+            重置默认
           </Button>
-          <Button variant="outline" size="sm">
+          <div className="h-4 w-px bg-border" />
+          <Button variant="outline" size="sm" onClick={() => setSaveDialogOpen(true)}>
             <Save className="mr-1 h-4 w-4" />
             保存配置
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setShowHistory(!showHistory)}>
+            <History className="mr-1 h-4 w-4" />
+            历史记录
           </Button>
           <Button size="sm" onClick={() => setShowExport(!showExport)}>
             <Download className="mr-1 h-4 w-4" />
             导出
+          </Button>
+          <div className="h-4 w-px bg-border" />
+          <Button variant="outline" size="sm" onClick={() => setApiKeyDialogOpen(true)}>
+            <Key className="mr-1 h-4 w-4" />
+            API Key
           </Button>
         </div>
       </header>
@@ -93,13 +113,94 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Right Panel - Export */}
+        {/* Right Panel - Export / History */}
         {showExport && (
           <div className="w-[400px] border-l border-border">
             <ExportPanel />
           </div>
         )}
+        {showHistory && (
+          <HistoryPanel onClose={() => setShowHistory(false)} />
+        )}
       </div>
+
+      {/* API Key Dialog */}
+      <ApiKeyDialog open={apiKeyDialogOpen} onOpenChange={setApiKeyDialogOpen} />
+
+      {/* Save Config Dialog */}
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>保存配置</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="config-name">配置名称</Label>
+              <Input
+                id="config-name"
+                placeholder="例如：个人意外险 v1.0"
+                value={configName}
+                onChange={(e) => setConfigName(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setSaveDialogOpen(false)}
+                disabled={saving}
+              >
+                取消
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={async () => {
+                  if (!configName.trim()) return
+                  setSaving(true)
+                  try {
+                    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+                    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+                    if (!supabaseUrl || !supabaseAnonKey) {
+                      throw new Error("Supabase 配置缺失")
+                    }
+
+                    const response = await fetch(`${supabaseUrl}/rest/v1/quoter_configs`, {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        "apikey": supabaseAnonKey,
+                        "Authorization": `Bearer ${supabaseAnonKey}`,
+                        "Prefer": "return=minimal",
+                      },
+                      body: JSON.stringify({
+                        name: configName.trim(),
+                        config_data: config,
+                      }),
+                    })
+
+                    if (!response.ok) {
+                      throw new Error("保存失败")
+                    }
+
+                    setSaveDialogOpen(false)
+                    setConfigName("")
+                    alert("保存成功！")
+                  } catch (error) {
+                    console.error("保存配置错误:", error)
+                    alert("保存失败，请重试")
+                  } finally {
+                    setSaving(false)
+                  }
+                }}
+                disabled={!configName.trim() || saving}
+              >
+                {saving ? "保存中..." : "保存"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -34,6 +34,7 @@ interface QuoterState {
 
   // 计算操作
   calculate: () => void
+  resetToDefault: () => void
 }
 
 // 根据配置生成初始表单值
@@ -271,5 +272,12 @@ export const useQuoterStore = create<QuoterState>((set, get) => {
     const { config, formValues } = get()
     const results = calculateAll(config, formValues)
     set({ calculatedValues: results })
+  },
+
+  resetToDefault: () => {
+    const { config } = get()
+    const defaultValues = getInitialFormValues(config)
+    set({ formValues: defaultValues })
+    get().calculate()
   },
 }})
