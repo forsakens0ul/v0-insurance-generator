@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ChevronDown } from "lucide-react"
 import { useQuoterStore } from "@/lib/quoter-store"
+import { ArrayFieldEditor } from "@/components/array-field-editor"
 
 export function QuoterPreview() {
   const { config, formValues, calculatedValues, setFormValue, calculate } = useQuoterStore()
@@ -101,6 +102,21 @@ export function QuoterPreview() {
               {field.label}
             </Label>
             <Input value={String(value ?? "")} onChange={(e) => setFormValue(field.id, e.target.value)} />
+          </div>
+        )
+
+      case "array":
+        return (
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">
+              {field.required && <span className="text-red-500 mr-1">*</span>}
+              {field.label}
+            </Label>
+            <ArrayFieldEditor
+              field={field}
+              value={Array.isArray(value) ? value : field.defaultValue as any[] || []}
+              onChange={(newValue) => setFormValue(field.id, newValue)}
+            />
           </div>
         )
 

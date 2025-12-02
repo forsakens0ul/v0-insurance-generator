@@ -4,8 +4,8 @@ import { calculateAll } from "./formula-engine"
 
 interface QuoterState {
   config: QuoterConfig
-  formValues: Record<string, string | number>
-  calculatedValues: Record<string, number>
+  formValues: Record<string, any>
+  calculatedValues: Record<string, any>
 
   // 配置操作
   setConfig: (config: QuoterConfig) => void
@@ -29,8 +29,8 @@ interface QuoterState {
   removeFormula: (formulaId: string) => void
 
   // 表单值操作
-  setFormValue: (fieldId: string, value: string | number) => void
-  setFormValues: (values: Record<string, string | number>) => void
+  setFormValue: (fieldId: string, value: any) => void
+  setFormValues: (values: Record<string, any>) => void
 
   // 计算操作
   calculate: () => void
@@ -38,8 +38,8 @@ interface QuoterState {
 }
 
 // 根据配置生成初始表单值
-function getInitialFormValues(config: QuoterConfig): Record<string, string | number> {
-  const values: Record<string, string | number> = {}
+function getInitialFormValues(config: QuoterConfig): Record<string, any> {
+  const values: Record<string, any> = {}
   for (const field of config.fields) {
     if (field.defaultValue !== undefined) {
       values[field.id] = field.defaultValue

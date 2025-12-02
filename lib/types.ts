@@ -1,5 +1,5 @@
 // 字段类型定义
-export type FieldType = "radio" | "select" | "number" | "text"
+export type FieldType = "radio" | "select" | "number" | "text" | "array"
 
 // 表单字段配置
 export interface FormField {
@@ -12,8 +12,14 @@ export interface FormField {
   min?: number
   max?: number
   suffix?: string
-  defaultValue?: string | number
+  defaultValue?: string | number | any[]
   tooltip?: string
+  // array类型专用配置
+  arrayConfig?: {
+    minItems: number
+    maxItems: number
+    itemFields: FormField[]
+  }
 }
 
 // 系数表配置
@@ -35,6 +41,8 @@ export interface Formula {
   dependencies: string[]
   showInResult: boolean
   unit?: string
+  // 是否为数组公式（对每个数组项执行）
+  arrayFormula?: boolean
 }
 
 // 报价器配置

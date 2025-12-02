@@ -32,7 +32,7 @@ function splitArgs(argsStr: string): string[] {
 }
 
 // 内置函数定义
-const builtInFunctions: Record<string, (...args: number[]) => number> = {
+const builtInFunctions: Record<string, (...args: any[]) => number> = {
   // 数学函数
   ROUND: (value: number, decimals = 0) => {
     const factor = Math.pow(10, decimals)
@@ -43,7 +43,11 @@ const builtInFunctions: Record<string, (...args: number[]) => number> = {
   ABS: (value: number) => Math.abs(value),
   MIN: (...args: number[]) => Math.min(...args),
   MAX: (...args: number[]) => Math.max(...args),
-  SUM: (...args: number[]) => args.reduce((a, b) => a + b, 0),
+  SUM: (...args: any[]) => {
+    // 支持数组和数字
+    const flat = args.flat(Infinity).filter(v => typeof v === 'number' && !isNaN(v))
+    return flat.reduce((a: number, b: number) => a + b, 0)
+  },
   AVG: (...args: number[]) => args.reduce((a, b) => a + b, 0) / args.length,
 
   // 条件函数
@@ -96,18 +100,25 @@ export function lookupCoefficient(
 export function evaluateFormula(
   expression: string,
   context: {
-    formValues: Record<string, string | number>
+    formValues: Record<string, any>
     coefficientTables: QuoterConfig["coefficientTables"]
-    calculatedValues: Record<string, number>
+    calculatedValues: Record<string, any>
     fields: QuoterConfig["fields"]
   },
+  arrayIndex?: number,
 ): number {
   let processedExpr = expression
   try {
     // 先替换字段引用 - 使用 $ 前缀表示字段
     // 例如: $age, $gender, $occupation
     processedExpr = processedExpr.replace(/\$(\w+)/g, (_, fieldId) => {
-      const value = context.formValues[fieldId]
+      let value = context.formValues[fieldId]
+
+      // 如果是数组公式计算，从数组中获取对应项
+      if (arrayIndex !== undefined && Array.isArray(value)) {
+        value = value[arrayIndex]?.[fieldId] ?? value[arrayIndex]
+      }
+
       if (typeof value === "string") {
         return `"${value}"`
       }
@@ -117,7 +128,14 @@ export function evaluateFormula(
     // 替换计算值引用 - 使用 @ 前缀
     // 例如: @mainPremium, @medicalPremium
     processedExpr = processedExpr.replace(/@(\w+)/g, (_, calcId) => {
-      return String(context.calculatedValues[calcId] ?? 0)
+      let value = context.calculatedValues[calcId]
+
+      // 如果是数组公式计算，从数组中获取对应项
+      if (arrayIndex !== undefined && Array.isArray(value)) {
+        value = value[arrayIndex]
+      }
+
+      return String(value ?? 0)
     })
 
     // 最后替换 LOOKUP 函数调用
@@ -257,22 +275,50 @@ export function sortFormulasByDependency(formulas: QuoterConfig["formulas"]): Qu
 // 执行所有公式计算
 export function calculateAll(
   config: QuoterConfig,
-  formValues: Record<string, string | number>,
-): Record<string, number> {
-  const results: Record<string, number> = {}
+  formValues: Record<string, any>,
+): Record<string, any> {
+  const results: Record<string, any> = {}
+
+  // 找到数组字段
+  const arrayFields = config.fields.filter(f => f.type === 'array')
 
   // 按依赖顺序排序公式
   const sortedFormulas = sortFormulasByDependency(config.formulas)
 
   // 依次计算每个公式
   for (const formula of sortedFormulas) {
-    const value = evaluateFormula(formula.expression, {
-      formValues,
-      coefficientTables: config.coefficientTables,
-      calculatedValues: results,
-      fields: config.fields,
-    })
-    results[formula.id] = value
+    // 如果是数组公式，对数组中的每一项执行
+    if (formula.arrayFormula && arrayFields.length > 0) {
+      const arrayField = arrayFields[0] // 假设只有一个数组字段
+      const arrayValue = formValues[arrayField.id] || []
+
+      if (Array.isArray(arrayValue) && arrayValue.length > 0) {
+        const arrayResults: number[] = []
+
+        for (let i = 0; i < arrayValue.length; i++) {
+          const value = evaluateFormula(formula.expression, {
+            formValues: { ...formValues, ...arrayValue[i] },
+            coefficientTables: config.coefficientTables,
+            calculatedValues: results,
+            fields: config.fields,
+          }, i)
+          arrayResults.push(value)
+        }
+
+        results[formula.id] = arrayResults
+      } else {
+        results[formula.id] = []
+      }
+    } else {
+      // 普通公式计算
+      const value = evaluateFormula(formula.expression, {
+        formValues,
+        coefficientTables: config.coefficientTables,
+        calculatedValues: results,
+        fields: config.fields,
+      })
+      results[formula.id] = value
+    }
   }
 
   return results
