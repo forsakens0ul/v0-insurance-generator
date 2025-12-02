@@ -405,8 +405,8 @@ export const tuanyiConfig: QuoterConfig = {
     {
       id: "insuranceDaysCoef",
       name: "投保天数系数",
-      description: "根据投保天数查询对应系数",
-      expression: "IF($insuranceDays >= 331, 1, IF($insuranceDays >= 301, 0.95, IF($insuranceDays >= 271, 0.9, IF($insuranceDays >= 241, 0.85, IF($insuranceDays >= 211, 0.8, IF($insuranceDays >= 181, 0.7, IF($insuranceDays >= 151, 0.6, IF($insuranceDays >= 121, 0.5, IF($insuranceDays >= 91, 0.4, IF($insuranceDays >= 61, 0.3, IF($insuranceDays >= 31, 0.2, 0.1)))))))))))",
+      description: "根据投保天数查询对应系数（365天=1）",
+      expression: "IF($insuranceDays >= 365, 1, IF($insuranceDays >= 331, 1, IF($insuranceDays >= 301, 0.95, IF($insuranceDays >= 271, 0.9, IF($insuranceDays >= 241, 0.85, IF($insuranceDays >= 211, 0.8, IF($insuranceDays >= 181, 0.7, IF($insuranceDays >= 151, 0.6, IF($insuranceDays >= 121, 0.5, IF($insuranceDays >= 91, 0.4, IF($insuranceDays >= 61, 0.3, IF($insuranceDays >= 31, 0.2, 0.1))))))))))))",
       dependencies: [],
       showInResult: false,
       unit: "",
