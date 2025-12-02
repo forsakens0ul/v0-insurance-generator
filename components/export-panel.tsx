@@ -309,7 +309,7 @@ ${resultDisplayCode}
       txt += `   - 引用方式: $${f.id}\n`
       txt += `   - 类型: ${f.type}\n`
       txt += `   - 必填: ${f.required ? "是" : "否"}\n`
-      txt += `   - 默认值: ${f.defaultValue}\n`
+      txt += `   - 默认值: ${typeof f.defaultValue === 'object' ? JSON.stringify(f.defaultValue) : f.defaultValue}\n`
       if (f.type === "number") {
         txt += `   - 范围: ${f.min ?? "无"} ~ ${f.max ?? "无"}\n`
         if (f.suffix) txt += `   - 单位: ${f.suffix}\n`
@@ -380,13 +380,22 @@ ${resultDisplayCode}
     txt += `输入值:\n`
     config.fields.forEach((f) => {
       const value = formValues[f.id]
-      const option = f.options?.find((o) => o.value === value)
-      txt += `  ${f.label}: ${option?.label ?? value} ${f.suffix ?? ""}\n`
+      if (f.type === 'array') {
+        txt += `  ${f.label}: [数组字段, ${Array.isArray(value) ? value.length : 0}项]\n`
+      } else {
+        const option = f.options?.find((o) => o.value === value)
+        txt += `  ${f.label}: ${option?.label ?? value} ${f.suffix ?? ""}\n`
+      }
     })
 
     txt += `\n计算结果:\n`
     config.formulas.forEach((f) => {
-      txt += `  ${f.name}: ${calculatedValues[f.id]?.toFixed(2) ?? "0.00"} ${f.unit ?? ""}\n`
+      const value = calculatedValues[f.id]
+      if (Array.isArray(value)) {
+        txt += `  ${f.name}: [数组结果, ${value.length}项]\n`
+      } else {
+        txt += `  ${f.name}: ${value?.toFixed(2) ?? "0.00"} ${f.unit ?? ""}\n`
+      }
     })
 
     return txt
@@ -399,7 +408,8 @@ ${resultDisplayCode}
     csv += "【表单字段配置】\n"
     csv += "字段ID,字段名称,字段类型,必填,默认值,最小值,最大值,后缀,选项\n"
     config.fields.forEach((f) => {
-      csv += `${f.id},${f.label},${f.type},${f.required ? "是" : "否"},${f.defaultValue ?? ""},${f.min ?? ""},${f.max ?? ""},${f.suffix ?? ""},"${f.options?.map((o) => `${o.label}:${o.value}`).join(";") ?? ""}"\n`
+      const defaultVal = typeof f.defaultValue === 'object' ? JSON.stringify(f.defaultValue) : (f.defaultValue ?? "")
+      csv += `${f.id},${f.label},${f.type},${f.required ? "是" : "否"},"${defaultVal}",${f.min ?? ""},${f.max ?? ""},${f.suffix ?? ""},"${f.options?.map((o) => `${o.label}:${o.value}`).join(";") ?? ""}"\n`
     })
 
     csv += "\n【计算公式配置】\n"
