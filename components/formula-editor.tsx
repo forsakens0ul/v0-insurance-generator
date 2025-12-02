@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Plus, Trash2, Info, ChevronDown, ChevronRight } from "lucide-react"
+import { Plus, Trash2, Info, ChevronDown, ChevronRight, Sparkles, Loader2 } from "lucide-react"
 import { useQuoterStore } from "@/lib/quoter-store"
 import type { Formula } from "@/lib/types"
 
@@ -17,6 +17,11 @@ export function FormulaEditor() {
   const { config, calculatedValues, updateFormula, addFormula, removeFormula } = useQuoterStore()
   const [expandedFormula, setExpandedFormula] = useState<string | null>(null)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [aiDialogOpen, setAiDialogOpen] = useState(false)
+  const [aiDescription, setAiDescription] = useState("")
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState("")
+  const [currentEditingFormulaId, setCurrentEditingFormulaId] = useState<string | null>(null)
   const [newFormula, setNewFormula] = useState<Partial<Formula>>({
     id: "",
     name: "",
@@ -72,6 +77,88 @@ export function FormulaEditor() {
       expression,
       dependencies: extractDependencies(expression),
     })
+  }
+
+  const handleAiGenerate = async () => {
+    if (!aiDescription.trim()) {
+      setAiError("请输入计算逻辑描述")
+      return
+    }
+
+    setAiLoading(true)
+    setAiError("")
+
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error("Supabase 配置缺失")
+      }
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/ai-formula-generator`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${supabaseAnonKey}`,
+        },
+        body: JSON.stringify({
+          description: aiDescription,
+          availableFields: config.fields.map(f => ({
+            id: f.id,
+            label: f.label,
+            type: f.type,
+          })),
+          availableTables: config.coefficientTables.map(t => ({
+            id: t.id,
+            name: t.name,
+            description: t.description,
+          })),
+          availableFormulas: config.formulas.map(f => ({
+            id: f.id,
+            name: f.name,
+          })),
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "AI 生成失败")
+      }
+
+      const result = await response.json()
+
+      if (currentEditingFormulaId) {
+        // 如果是编辑现有公式
+        handleExpressionChange(currentEditingFormulaId, result.formula)
+        const formula = config.formulas.find(f => f.id === currentEditingFormulaId)
+        if (formula && result.explanation) {
+          updateFormula(currentEditingFormulaId, { description: result.explanation })
+        }
+      } else {
+        // 如果是添加新公式
+        setNewFormula({
+          ...newFormula,
+          expression: result.formula,
+          description: result.explanation || "",
+        })
+      }
+
+      setAiDialogOpen(false)
+      setAiDescription("")
+    } catch (error) {
+      console.error("AI 生成错误:", error)
+      setAiError(error instanceof Error ? error.message : "生成失败，请重试")
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const openAiDialog = (formulaId?: string) => {
+    setCurrentEditingFormulaId(formulaId || null)
+    setAiDescription("")
+    setAiError("")
+    setAiDialogOpen(true)
   }
 
   return (
@@ -182,7 +269,18 @@ export function FormulaEditor() {
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs">计算表达式</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">计算表达式</Label>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 text-xs gap-1"
+                      onClick={() => openAiDialog(formula.id)}
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      AI生成
+                    </Button>
+                  </div>
                   <Textarea
                     className="text-sm font-mono min-h-[60px]"
                     value={formula.expression}
@@ -269,7 +367,18 @@ export function FormulaEditor() {
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs">计算表达式</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">计算表达式</Label>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 text-xs gap-1"
+                  onClick={() => openAiDialog()}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  AI生成
+                </Button>
+              </div>
               <Textarea
                 className="text-sm font-mono"
                 rows={3}
@@ -300,6 +409,73 @@ export function FormulaEditor() {
             <Button onClick={handleAddFormula} className="w-full">
               添加公式
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI 公式生成对话框 */}
+      <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              AI 智能公式生成器
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+              <p className="mb-2 font-medium text-foreground">💡 使用示例：</p>
+              <ul className="space-y-1 text-xs">
+                <li>• "30岁以下按年龄乘以100，30岁以上打9折"</li>
+                <li>• "查询年龄系数表，用年龄乘以系数再乘以保额"</li>
+                <li>• "主险保费加上医疗保费，结果四舍五入保留2位小数"</li>
+              </ul>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">描述您的计算逻辑</Label>
+              <Textarea
+                className="min-h-[100px] text-sm"
+                placeholder="请用自然语言描述您想要的计算逻辑..."
+                value={aiDescription}
+                onChange={(e) => setAiDescription(e.target.value)}
+                disabled={aiLoading}
+              />
+            </div>
+
+            {aiError && (
+              <div className="text-sm text-destructive bg-destructive/10 rounded-lg p-3">
+                {aiError}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setAiDialogOpen(false)}
+                variant="outline"
+                className="flex-1"
+                disabled={aiLoading}
+              >
+                取消
+              </Button>
+              <Button
+                onClick={handleAiGenerate}
+                className="flex-1 gap-2"
+                disabled={aiLoading}
+              >
+                {aiLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    生成中...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    生成公式
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
