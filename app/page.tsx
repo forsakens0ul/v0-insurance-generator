@@ -6,6 +6,7 @@ import { QuoterPreview } from "@/components/quoter-preview"
 import { ExportPanel } from "@/components/export-panel"
 import { ApiKeyDialog } from "@/components/api-key-dialog"
 import { HistoryPanel } from "@/components/history-panel"
+import { TemplateSelector } from "@/components/template-selector"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
@@ -20,6 +21,7 @@ export default function Home() {
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false)
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+  const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false)
   const [configName, setConfigName] = useState("")
   const [saving, setSaving] = useState(false)
   const { config, resetToDefault } = useQuoterStore()
@@ -37,6 +39,13 @@ export default function Home() {
           </div>
           <span className="text-sm text-muted-foreground">|</span>
           <span className="text-sm text-muted-foreground">{config.name}</span>
+          <Button
+            size="sm"
+            onClick={() => setTemplateSelectorOpen(true)}
+            className="h-7 bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            切换模板
+          </Button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -126,6 +135,13 @@ export default function Home() {
 
       {/* API Key Dialog */}
       <ApiKeyDialog open={apiKeyDialogOpen} onOpenChange={setApiKeyDialogOpen} />
+
+      {/* Template Selector */}
+      <TemplateSelector
+        open={templateSelectorOpen}
+        onOpenChange={setTemplateSelectorOpen}
+        currentTemplateId={config.id}
+      />
 
       {/* Save Config Dialog */}
       <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
